@@ -1,7 +1,7 @@
 package Future::Q;
 use strict;
 use warnings;
-use Future 0.12;
+use Future 0.13;
 use base "Future";
 use Devel::GlobalDestruction;
 use Scalar::Util qw(refaddr blessed weaken);
@@ -110,7 +110,9 @@ sub then {
         }elsif($invo_future->is_fulfilled && defined($on_fulfilled)) {
             $return_future = $class->try($on_fulfilled, $invo_future->get);
         }
-        $return_future->_q_set_failure_handled();
+        if($return_future->can("_q_set_failure_handled")) {
+            $return_future->_q_set_failure_handled();
+        }
         $return_future_for_next = $return_future;
         weaken($return_future_for_next);
 
@@ -122,7 +124,7 @@ sub then {
                 return;
             }
             return if !$next_future->is_pending;
-            if($return_future->is_rejected) {
+            if($return_future->failure) {
                 $next_future->reject($return_future->failure);
             }else {
                 $next_future->fulfill($return_future->get);
@@ -135,7 +137,7 @@ sub then {
             if(defined($invo_future) && $invo_future->is_pending) {
                 $invo_future->cancel();
             }
-            if(defined($return_future_for_next) && $return_future_for_next->is_pending) {
+            if(defined($return_future_for_next) && !$return_future_for_next->is_ready) {
                 $return_future_for_next->cancel();
             }
         });
@@ -185,7 +187,7 @@ foreach my $method (qw(wait_all wait_any needs_all needs_any)) {
     };
 }
 
-our $VERSION = '0.012';
+our $VERSION = '0.020';
 
 1;
 
@@ -197,7 +199,7 @@ Future::Q - a thenable Future like Q module for JavaScript
 
 =head1 VERSION
 
-Version 0.012
+Version 0.020
 
 =head1 SYNOPSIS
 
@@ -387,6 +389,28 @@ In addition to all object methods in L<Future>, L<Future::Q> has the following o
 
 Registers callback functions that are executed when C<$future> is fulfilled or rejected,
 and returns a new L<Future::Q> object that represents the result of the whole operation.
+
+B<< Difference from then() method of L<Future> >>
+
+L<Future::Q> overrides the C<then()> method of the base L<Future> class.
+Basically they behave in the same way, but in C<then()> method of L<Future::Q>,
+
+=over
+
+=item *
+
+the callback funcions do not have to return a L<Future> object.
+If they do not, the return values are automatically transformed into a fulfilled L<Future::Q> object.
+
+=item *
+
+it will not warn you even if you call the C<then()> method in void context.
+
+=back
+
+B<< Detailed specification >>
+
+Below is the detailed specification of C<then()> method.
 
 C<$on_fulfilled> and C<$on_rejected> are subroutine references.
 When C<$future> is fulfilled, C<$on_fulfilled> callback is executed.

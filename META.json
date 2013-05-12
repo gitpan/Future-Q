@@ -4,7 +4,7 @@
       "Toshio Ito <toshioito@cpan.org>"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "ExtUtils::MakeMaker version 6.62, CPAN::Meta::Converter version 2.112150",
+   "generated_by" : "Module::Build version 0.4003, CPAN::Meta::Converter version 2.112150",
    "license" : [
       "perl_5"
    ],
@@ -16,6 +16,8 @@
    "no_index" : {
       "directory" : [
          "t",
+         "xt",
+         "eg",
          "inc"
       ]
    },
@@ -33,19 +35,31 @@
       },
       "configure" : {
          "requires" : {
-            "ExtUtils::MakeMaker" : 0
+            "Module::Build" : "0.40"
          }
       },
       "runtime" : {
          "requires" : {
             "Carp" : 0,
             "Devel::GlobalDestruction" : 0,
-            "Future" : "0.12",
+            "Future" : "0.13",
             "Scalar::Util" : 0,
-            "Try::Tiny" : 0
+            "Try::Tiny" : 0,
+            "perl" : "5.006"
          }
       }
    },
+   "provides" : {
+      "Future::Q" : {
+         "file" : "lib/Future/Q.pm",
+         "version" : "0.020"
+      }
+   },
    "release_status" : "stable",
-   "version" : "0.012"
+   "resources" : {
+      "license" : [
+         "http://dev.perl.org/licenses/"
+      ]
+   },
+   "version" : "0.020"
 }
