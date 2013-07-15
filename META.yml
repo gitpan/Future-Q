@@ -28,7 +28,7 @@ no_index:
 provides:
   Future::Q:
     file: lib/Future/Q.pm
-    version: 0.030
+    version: 0.040
 requires:
   Carp: 0
   Devel::GlobalDestruction: 0
@@ -38,4 +38,4 @@ requires:
   perl: 5.006
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.030
+version: 0.040

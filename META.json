@@ -52,7 +52,7 @@
    "provides" : {
       "Future::Q" : {
          "file" : "lib/Future/Q.pm",
-         "version" : "0.030"
+         "version" : "0.040"
       }
    },
    "release_status" : "stable",
@@ -61,5 +61,5 @@
          "http://dev.perl.org/licenses/"
       ]
    },
-   "version" : "0.030"
+   "version" : "0.040"
 }
