@@ -1,5 +1,6 @@
 Build.PL
 Changes
+cpanfile
 eg/synopsis.pl
 eg/try.pl
 lib/Future/Q.pm

@@ -4,7 +4,7 @@
       "Toshio Ito <toshioito@cpan.org>"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "Module::Build version 0.4003, CPAN::Meta::Converter version 2.112150",
+   "generated_by" : "Module::Build version 0.4003, CPAN::Meta::Converter version 2.132140",
    "license" : [
       "perl_5"
    ],
@@ -24,27 +24,30 @@
    "prereqs" : {
       "build" : {
          "requires" : {
-            "Carp" : 0,
-            "FindBin" : 0,
-            "Scalar::Util" : 0,
-            "Test::Identity" : 0,
-            "Test::Memory::Cycle" : 0,
+            "Carp" : "0",
+            "FindBin" : "0",
+            "Module::Build::Pluggable::CPANfile" : "0.02",
+            "Scalar::Util" : "0",
+            "Test::Identity" : "0",
+            "Test::Memory::Cycle" : "0",
             "Test::MockModule" : "0.05",
-            "Test::More" : 0
+            "Test::More" : "0"
          }
       },
       "configure" : {
          "requires" : {
-            "Module::Build" : "0.40"
+            "Module::Build" : "0.40",
+            "Module::Build::Pluggable" : "0.09",
+            "Module::Build::Pluggable::CPANfile" : "0.02"
          }
       },
       "runtime" : {
          "requires" : {
-            "Carp" : 0,
-            "Devel::GlobalDestruction" : 0,
+            "Carp" : "0",
+            "Devel::GlobalDestruction" : "0",
             "Future" : "0.13",
-            "Scalar::Util" : 0,
-            "Try::Tiny" : 0,
+            "Scalar::Util" : "0",
+            "Try::Tiny" : "0",
             "perl" : "5.006"
          }
       }
@@ -52,14 +55,17 @@
    "provides" : {
       "Future::Q" : {
          "file" : "lib/Future/Q.pm",
-         "version" : "0.040"
+         "version" : "0.050"
       }
    },
    "release_status" : "stable",
    "resources" : {
-      "license" : [
-         "http://dev.perl.org/licenses/"
-      ]
+      "bugtracker" : {
+         "web" : "https://github.com/debug-ito/Future-Q/issues"
+      },
+      "repository" : {
+         "url" : "git://github.com/debug-ito/Future-Q.git"
+      }
    },
-   "version" : "0.040"
+   "version" : "0.050"
 }

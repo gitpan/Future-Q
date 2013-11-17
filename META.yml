@@ -5,6 +5,7 @@ author:
 build_requires:
   Carp: 0
   FindBin: 0
+  Module::Build::Pluggable::CPANfile: 0.02
   Scalar::Util: 0
   Test::Identity: 0
   Test::Memory::Cycle: 0
@@ -12,8 +13,10 @@ build_requires:
   Test::More: 0
 configure_requires:
   Module::Build: 0.40
+  Module::Build::Pluggable: 0.09
+  Module::Build::Pluggable::CPANfile: 0.02
 dynamic_config: 1
-generated_by: 'Module::Build version 0.4003, CPAN::Meta::Converter version 2.112150'
+generated_by: 'Module::Build version 0.4003, CPAN::Meta::Converter version 2.132140'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -28,7 +31,7 @@ no_index:
 provides:
   Future::Q:
     file: lib/Future/Q.pm
-    version: 0.040
+    version: 0.050
 requires:
   Carp: 0
   Devel::GlobalDestruction: 0
@@ -37,5 +40,6 @@ requires:
   Try::Tiny: 0
   perl: 5.006
 resources:
-  license: http://dev.perl.org/licenses/
-version: 0.040
+  bugtracker: https://github.com/debug-ito/Future-Q/issues
+  repository: git://github.com/debug-ito/Future-Q.git
+version: 0.050
