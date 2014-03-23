@@ -8,6 +8,8 @@ use Scalar::Util qw(refaddr blessed weaken);
 use Carp;
 use Try::Tiny ();
 
+our $VERSION = '0.060';
+
 our @CARP_NOT = qw(Try::Tiny Future);
 
 ## ** lexical attributes to avoid collision of names.
@@ -94,50 +96,25 @@ sub then {
     $self->_q_set_failure_handled();
     
     my $next_future = $self->new;
-    my $return_future_for_next;
     $self->on_ready(sub {
         my $invo_future = shift;
         if($invo_future->is_cancelled) {
             $next_future->cancel() if $next_future->is_pending;
             return;
         }
-
-        ## determine return_future
         my $return_future = $invo_future;
         if($invo_future->is_rejected && defined($on_rejected)) {
             $return_future = $class->try($on_rejected, $invo_future->failure);
         }elsif($invo_future->is_fulfilled && defined($on_fulfilled)) {
             $return_future = $class->try($on_fulfilled, $invo_future->get);
         }
-        if($return_future->can("_q_set_failure_handled")) {
-            $return_future->_q_set_failure_handled();
-        }
-        $return_future_for_next = $return_future;
-        weaken($return_future_for_next);
-
-        ## transfer the results of return_future to next_future
-        $return_future->on_ready(sub {
-            my $return_future = shift;
-            if($return_future->is_cancelled) {
-                $next_future->cancel() if $next_future->is_pending;
-                return;
-            }
-            return if !$next_future->is_pending;
-            if($return_future->failure) {
-                $next_future->reject($return_future->failure);
-            }else {
-                $next_future->fulfill($return_future->get);
-            }
-        });
+        $next_future->resolve($return_future);
     });
     if($next_future->is_pending) {
         weaken(my $invo_future = $self);
         $next_future->on_cancel(sub {
             if(defined($invo_future) && $invo_future->is_pending) {
                 $invo_future->cancel();
-            }
-            if(defined($return_future_for_next) && !$return_future_for_next->is_ready) {
-                $return_future_for_next->cancel();
             }
         });
     }
@@ -152,6 +129,42 @@ sub catch {
 
 sub fulfill {
     goto $_[0]->can('done');
+}
+
+sub resolve {
+    my ($self, @result) = @_;
+    if(not (@result == 1 && blessed($result[0]) && $result[0]->isa("Future"))) {
+        goto $self->can("fulfill");
+    }
+    return $self if $self->is_cancelled;
+    my $base_future = $result[0];
+
+    ## Maybe we should check if $base_future is identical to
+    ## $self. Promises/A+ spec v1.1 [1] states we should reject $self
+    ## in that case. However, since Q v1.0.1 does not care that case,
+    ## we also leave that case unchecked for now.
+    ##
+    ## [1]: https://github.com/promises-aplus/promises-spec/tree/1.1.0
+    
+    $base_future->on_ready(sub {
+        my $base_future = shift;
+        return if $self->is_ready;
+        if($base_future->is_cancelled) {
+            $self->cancel();
+        }elsif($base_future->failure) {
+            if($base_future->can("_q_set_failure_handled")) {
+                $base_future->_q_set_failure_handled();
+            }
+            $self->reject($base_future->failure);
+        }else {
+            $self->fulfill($base_future->get);
+        }
+    });
+    weaken(my $weak_base = $base_future);
+    $self->on_cancel(sub {
+        $weak_base->cancel() if defined($weak_base) && !$weak_base->is_ready;
+    });
+    return $self;
 }
 
 sub reject {
@@ -186,19 +199,13 @@ foreach my $method (qw(wait_all wait_any needs_all needs_any)) {
     };
 }
 
-our $VERSION = '0.050';
-
 1;
 
 __END__
 
 =head1 NAME
 
-Future::Q - a thenable Future like Q module for JavaScript
-
-=head1 VERSION
-
-Version 0.050
+Future::Q - a Future (or Promise or Deferred) like Q module for JavaScript
 
 =head1 SYNOPSIS
 
@@ -234,7 +241,7 @@ Version 0.050
 
 L<Future::Q> is a subclass of L<Future>.
 It extends its API with C<then()> and C<try()> etc, which are
-almost completely compatible with Kris Kowal's Q module for Javascript.
+almost completely compatible with Kris Kowal's Q module for JavaScript.
 
 L<Future::Q>'s API and documentation is designed to be self-contained,
 at least for basic usage of Futures.
@@ -244,6 +251,7 @@ you should refer to L</Missing Methods> section and/or L<Future>.
 
 Basically a Future (in a broad meaning) represents an operation (whether it's in progress
 or finished) and its results.
+It is also referred to as "Promise" or "Deferred" in other contexts.
 For further information as to what Future is all about, see:
 
 =over
@@ -254,11 +262,11 @@ L<Future> - the base class
 
 =item *
 
-L<Promises> - based on jQuery and YUI Deferred plug-in
+L<Promises> - another Future/Promise/Deferred implementation with pretty good documentation
 
 =item *
 
-L<Q module|http://documentup.com/kriskowal/q/> - Javascript module
+L<Q|http://documentup.com/kriskowal/q/> - JavaScript module
 
 =back
 
@@ -330,11 +338,15 @@ Futures that C<then()> or C<catch()> method has been called on.
 
 =item *
 
-Futures that are returned by C<$on_fulfilled> or C<$on_rejected> callbacks for C<then()> method.
+Futures returned by C<$on_fulfilled> or C<$on_rejected> callbacks for C<then()> method.
 
 =item *
 
 Subfutures given to C<wait_all()>, C<wait_any()>, C<needs_all()> and C<needs_any()> method.
+
+=item *
+
+Futures given to another Future's C<resolve()> method as its single argument.
 
 =back
 
@@ -500,7 +512,11 @@ If C<$future> is pending, it is cancelled when C<$next_future> is cancelled.
 If either C<$on_fulfilled> or C<$on_rejected> is executed and its C<$returned_future>
 is pending, the C<$returned_future> is cancelled when C<$next_future> is cancelled.
 
-You should not call C<fulfill()> or C<reject()> on C<$next_future>.
+You should not call C<fulfill()>, C<reject()>, C<resolve()> etc on C<$next_future>.
+
+Since C<then()> method passes the C<$future>'s state to C<$next_future>,
+C<$future>'s failure becomes "handled", i.e., L<Future::Q> won't warn you
+if C<$future> is rejected and DESTROYed.
 
 =head2 $next_future = $future->catch([$on_rejected])
 
@@ -519,6 +535,42 @@ C<$exception> must be a scalar evaluated as boolean true.
 
 This method is an alias of C<fail()> method (not C<die()> method).
 
+=head2 $future = $future->resolve(@result)
+
+Basically same as C<fulfill()> method, but if you call it with a single L<Future> object as the argument,
+C<$future> will follow the given L<Future>'s state.
+
+Suppose you call C<< $future->resolve($base_future) >>, then
+
+=over
+
+=item *
+
+If C<$base_future> is pending, C<$future> is pending. When C<$base_future> changes its state,
+C<$future> will change its state to C<$base_future>'s state with the same values.
+
+=item *
+
+If C<$base_future> is fulfilled, C<$future> is immediately fulfilled with the same values as C<$base_future>'s.
+
+=item *
+
+If C<$base_future> is rejected, C<$future> is immediately rejected with the same values as C<$base_future>'s.
+
+=item *
+
+If C<$base_future> is cancelled, C<$future> is immediately cancelled.
+
+=back
+
+After calling C<resolve()>, you should not call C<fulfill()>, C<reject()>, C<resolve()> etc on the C<$future> anymore.
+
+You can call C<cancel()> on C<$future> afterward. If you call C<< $future->cancel() >>, C<$base_future> is cancelled, too.
+
+Because C<$base_future>'s state is passed to C<$future>, C<$base_future>'s failure becomes "handled", i.e.,
+L<Future::Q> won't warn you when C<$base_future> is rejected and DESTROYed.
+
+
 =head2 $is_pending = $future->is_pending()
 
 Returns true if the C<$future> is pending. It returns false otherwise.
@@ -530,6 +582,11 @@ Returns true if the C<$future> is fulfilled. It returns false otherwise.
 =head2 $is_rejected = $future->is_rejected()
 
 Returns true if the C<$future> is rejected. It returns false otherwise.
+
+=head2 $is_cancelled = $future->is_cancelled()
+
+Returns true if the C<$future> is cancelled. It returns false otherwise.
+This method is inherited from L<Future>.
 
 =head1 EXAMPLE
 
@@ -585,7 +642,8 @@ L<Future::Q> has the fourth state "cancelled", while promise in Q does not.
 
 =item *
 
-In L<Future::Q>, callbacks for C<then()> method can be executed immediately.
+In L<Future::Q>, callbacks for C<then()> and C<try()> methods can be executed immediately,
+while they are always deferred in Q.
 This is because L<Future::Q> does not assume any event loop mechanism.
 
 =item *
@@ -628,11 +686,6 @@ Use C<< Future::Q->fcall() >>.
 
 Use C<< Future::Q->needs_all() >> and C<< Future::Q->wait_all() >> methods inherited from the original L<Future> class.
 
-=item deferred.resolve()
-
-This is an interesting method, but it's not supported in this version of L<Future::Q>.
-Call C<fulfill()> or C<reject()> explicitly instead.
-
 =item Q()
 
 Use C<< Future::Q->wrap() >> method inherited from the original L<Future> class.
@@ -644,6 +697,14 @@ Use C<< Future::Q->wrap() >> method inherited from the original L<Future> class.
 
 =over
 
+=item L<Q|http://documentup.com/kriskowal/q/>
+
+The JavaScript module that L<Future::Q> tries to emulate.
+
+=item L<Promises/A+|http://promises-aplus.github.io/promises-spec/>
+
+"Promises/A+" specification for JavaScript promises. This is the spec that Q implements.
+
 =item L<Future>
 
 Base class of this module. L<Future> has a lot of methods you may find
@@ -654,6 +715,8 @@ interesting.
 Utility functions for L<Future>s.  Note that the error handling
 mechanism of L<Future::Q> may not work well with L<Future::Utils>
 functions.
+Personally I recommend using L<CPS> for looping asynchronous operations.
+
 
 =item L<IO::Async::Future>
 
@@ -662,16 +725,20 @@ Subclass of L<Future> that works well with L<IO::Async> event framework.
 =item L<Promises>
 
 Another promise/deferred/future/whatever implementation.
-Its API is more like jQuery's promises than Q.
-For the difference between jQuery.promise and Q, check out
-L<https://github.com/kriskowal/q/wiki/Coming-from-jQuery>
+Its goal is to implement Promises/A+ specification.
+Because Q is also an implementation of Promises/A+, L<Promises> and Q (and L<Futuer::Q>) are very similar.
+
 
 =item L<AnyEvent::Promises>
 
 Another port of Q (implementation of Promises/A+) in Perl.
-This module is more similar to Q than L<Future::Q>.
 It depends on L<AnyEvent>.
 
+                [Future] -\
+                           +-- [Future::Q]
+    [Promises/A+] -- [Q] -/
+                  -- [Promises]
+                  -- [AnyEvent::Promises]
 
 =back
 

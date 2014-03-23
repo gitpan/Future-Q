@@ -14,11 +14,14 @@ t/27-try.t
 t/30-then.t
 t/35-then-cancel.t
 t/37-junk-inputs.t
+t/39-then-order.t
 t/40-unhandled-single.t
 t/41-unhandled-dependent.t
 t/42-unhandled-position.t
 t/50-failure-position.t
 t/60-return-future-base.t
+t/70-resolve.t
+t/80-network.t
 t/testlib/Croak.pm
 t/testlib/Utils.pm
 xt/manifest.t
