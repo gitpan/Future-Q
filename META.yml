@@ -31,11 +31,11 @@ no_index:
 requires:
   Carp: 0
   Devel::GlobalDestruction: 0
-  Future: 0.13
+  Future: 0.22
   Scalar::Util: 0
   Try::Tiny: 0
   perl: 5.006
 resources:
   bugtracker: https://github.com/debug-ito/Future-Q/issues
   repository: git://github.com/debug-ito/Future-Q.git
-version: 0.070
+version: 0.080
