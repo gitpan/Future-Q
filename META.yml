@@ -34,8 +34,9 @@ requires:
   Future: 0.22
   Scalar::Util: 0
   Try::Tiny: 0
+  parent: 0
   perl: 5.006
 resources:
   bugtracker: https://github.com/debug-ito/Future-Q/issues
   repository: git://github.com/debug-ito/Future-Q.git
-version: 0.080
+version: 0.090

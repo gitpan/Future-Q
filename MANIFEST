@@ -1,6 +1,7 @@
 Build.PL
 Changes
 cpanfile
+eg/finally.pl
 eg/synopsis.pl
 eg/try.pl
 lib/Future/Q.pm
@@ -12,7 +13,9 @@ t/20-predicates.t
 t/25-aliases.t
 t/27-try.t
 t/30-then.t
+t/31-finally.t
 t/35-then-cancel.t
+t/36-finally-cancel.t
 t/37-junk-inputs.t
 t/39-then-order.t
 t/40-unhandled-single.t
