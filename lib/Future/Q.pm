@@ -1,14 +1,14 @@
 package Future::Q;
 use strict;
 use warnings;
-use Future 0.22;
+use Future 0.29;
 use parent "Future";
 use Devel::GlobalDestruction;
 use Scalar::Util qw(refaddr blessed weaken);
 use Carp;
 use Try::Tiny ();
 
-our $VERSION = '0.090';
+our $VERSION = '0.100';
 
 our @CARP_NOT = qw(Try::Tiny Future);
 
@@ -26,9 +26,17 @@ sub new {
     return $self;
 }
 
+sub _q_go_super_DESTROY {
+    my ($self) = @_;
+    my $super_destroy = $self->can("SUPER::DESTROY");
+    goto $super_destroy if defined $super_destroy;
+}
+
 sub DESTROY {
     my ($self) = @_;
-    return if in_global_destruction;
+    if(in_global_destruction) {
+        goto \&_q_go_super_DESTROY;
+    }
     my $id = refaddr $self;
     if($self->is_ready && $self->failure && !$failure_handled_for{$id}) {
         $self->_q_warn_failure();
@@ -42,6 +50,7 @@ sub DESTROY {
         }
     }
     delete $failure_handled_for{$id};
+    goto \&_q_go_super_DESTROY;
 }
 
 sub _q_set_failure_handled {
@@ -190,19 +199,19 @@ sub is_fulfilled {
 
 sub is_rejected {
     my ($self) = @_;
-    return ($self->is_ready && $self->failure);
+    return ($self->is_ready && !!$self->failure);
 }
 
 foreach my $method (qw(wait_all wait_any needs_all needs_any)) {
     no strict "refs";
-    my $supermethod = "SUPER::$method";
+    my $supermethod_code = __PACKAGE__->can("SUPER::$method");
     *{$method} = sub {
         my ($self, @subfutures) = @_;
         foreach my $sub (@subfutures) {
             next if !blessed($sub) || !$sub->can('_q_set_failure_handled');
             $sub->_q_set_failure_handled();
         }
-        goto $self->can($supermethod);
+        goto $supermethod_code;
     };
 }
 

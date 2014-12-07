@@ -23,6 +23,7 @@ t/41-unhandled-dependent.t
 t/42-unhandled-position.t
 t/44-unhandled-default.t
 t/50-failure-position.t
+t/51-debugging.t
 t/60-return-future-base.t
 t/70-resolve.t
 t/80-network.t
